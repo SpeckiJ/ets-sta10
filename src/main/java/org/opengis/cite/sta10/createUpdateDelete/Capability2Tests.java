@@ -5,7 +5,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.joda.time.DateTime;
+import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -220,7 +223,7 @@ public class Capability2Tests {
             checkForObservationResultTime(entity, null);
             long obsId3 = entity.getLong(ControlInformation.ID);
             observationIds.add(obsId3);
-            checkAutomaticInsertionOfFOI(obsId2, locationEntity, automatedFOIId);
+            checkAutomaticInsertionOfFOI(obsId3, locationEntity, automatedFOIId);
 
             /* HistoricalLocation */
             urlParameters = "{\n"
@@ -778,9 +781,9 @@ public class Capability2Tests {
             /* HistoricalLocation */
             long histLocId = historicalLocationIds.get(0);
             entity = getEntity(EntityType.HISTORICAL_LOCATION, histLocId);
-            urlParameters = "{\"time\": \"2015-07-01T00:00:00.000Z\"}";
+            urlParameters = "{\"time\": \"2015-07-01T00:00:00Z\"}";
             diffs = new HashMap<>();
-            diffs.put("time", "2015-07-01T00:00:00.000Z");
+            diffs.put("time", "2015-07-01T00:00:00Z");
             updatedEntity = patchEntity(EntityType.HISTORICAL_LOCATION, urlParameters, histLocId);
             checkPatch(EntityType.HISTORICAL_LOCATION, entity, updatedEntity, diffs);
 
@@ -853,31 +856,37 @@ public class Capability2Tests {
      */
     @Test(description = "DELETE Entities", groups = "level-2", priority = 5)
     public void deleteEntities() {
-        for (int i = 0; i < observationIds.size(); i++) {
-            deleteEntity(EntityType.OBSERVATION, observationIds.get(i));
-        }
-        for (int i = 0; i < foiIds.size(); i++) {
-            deleteEntity(EntityType.FEATURE_OF_INTEREST, foiIds.get(i));
-        }
-        for (int i = 0; i < datastreamIds.size(); i++) {
-            deleteEntity(EntityType.DATASTREAM, datastreamIds.get(i));
-        }
-        for (int i = 0; i < obsPropIds.size(); i++) {
-            deleteEntity(EntityType.OBSERVED_PROPERTY, obsPropIds.get(i));
-        }
-        for (int i = 0; i < sensorIds.size(); i++) {
-            deleteEntity(EntityType.SENSOR, sensorIds.get(i));
-        }
-        for (int i = 0; i < historicalLocationIds.size(); i++) {
-            deleteEntity(EntityType.HISTORICAL_LOCATION, historicalLocationIds.get(i));
-        }
-        for (int i = 0; i < locationIds.size(); i++) {
-            deleteEntity(EntityType.LOCATION, locationIds.get(i));
-        }
-        for (int i = 0; i < thingIds.size(); i++) {
-            deleteEntity(EntityType.THING, thingIds.get(i));
-        }
-
+        observationIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.OBSERVATION, elem);
+        });
+        
+        foiIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.FEATURE_OF_INTEREST, elem);
+        });
+        
+        datastreamIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.DATASTREAM, elem);
+        });
+        
+        obsPropIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.OBSERVED_PROPERTY, elem);
+        });
+        
+        sensorIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.SENSOR, elem);
+        });
+        
+        historicalLocationIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.HISTORICAL_LOCATION, elem);
+        });
+        
+        locationIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.LOCATION, elem);
+        });
+        
+        thingIds.stream().collect(Collectors.toSet()).forEach(elem -> {
+            deleteEntity(EntityType.THING, elem);
+        });
         checkDeleteIntegrityConstraint();
     }
 
@@ -1394,10 +1403,13 @@ public class Capability2Tests {
      */
     private void checkForObservationResultTime(JSONObject observation, String resultTimeValue) {
         try {
+            
             if (resultTimeValue == null) {
                 Assert.assertEquals(observation.get("resultTime").toString(), "null", "The resultTime of the Observation " + observation.getLong(ControlInformation.ID) + " should have been null but it is now \"" + observation.get("resultTime").toString() + "\".");
             } else {
-                Assert.assertEquals(observation.get("resultTime").toString(), resultTimeValue, "The resultTime of the Observation " + observation.getLong(ControlInformation.ID) + " should have been \"" + resultTimeValue + "\" but it is now \"" + observation.get("resultTime").toString() + "\".");
+                DateTime correct = ISODateTimeFormat.dateTimeParser().parseDateTime(resultTimeValue);
+                DateTime actual = ISODateTimeFormat.dateTimeParser().parseDateTime(observation.get("resultTime").toString());
+                Assert.assertEquals(actual, correct, "The resultTime of the Observation " + observation.getLong(ControlInformation.ID) + " should have been \"" + resultTimeValue + "\" but it is now \"" + observation.get("resultTime").toString() + "\".");
             }
         } catch (JSONException e) {
             e.printStackTrace();

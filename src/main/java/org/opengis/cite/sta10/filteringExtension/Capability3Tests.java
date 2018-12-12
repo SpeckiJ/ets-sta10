@@ -275,7 +275,7 @@ public class Capability3Tests {
      * $count, $top, $skip, $orderby, and $filter togther and check the priority
      * in result.
      */
-    @Test(description = "Check priotity of query options", groups = "level-3")
+    @Test(description = "Check priority of query options", groups = "level-3")
     public void checkQueriesPriorityOrdering() {
         try {
             String urlString = ServiceURLBuilder.buildURLString(rootUri, EntityType.OBSERVATION, -1, null, "?$count=true&$top=1&$skip=2&$orderby=phenomenonTime%20asc&$filter=result%20gt%20'3'");
@@ -283,7 +283,7 @@ public class Capability3Tests {
             Assert.assertEquals(Integer.parseInt(responseMap.get("response-code").toString()), 200, "There is problem for GET Observations using multiple Query Options! HTTP status code: " + responseMap.get("response-code"));
             String response = responseMap.get("response").toString();
             JSONArray array = new JSONObject(response).getJSONArray("value");
-            Assert.assertEquals(new JSONObject(response).getLong("@iot.count"), 6, "The query order of execution is not correct. The expected count is 6, but the service returned " + new JSONObject(response).getLong("@iot.count"));
+            Assert.assertEquals(new JSONObject(response).getLong("@iot.count"), 9, "The query order of execution is not correct. The expected count is 9, but the service returned " + new JSONObject(response).getLong("@iot.count"));
             Assert.assertEquals(array.length(), 1, "The query asked for top 1, but the service rerurned " + array.length() + " entities.");
             Assert.assertEquals(array.getJSONObject(0).getString("result"), "6", "The query order of execution is not correct. The expected Observation result is 6, but it is " + array.getJSONObject(0).getString("result"));
         } catch (JSONException e) {
@@ -310,23 +310,25 @@ public class Capability3Tests {
             long id = array.getJSONObject(0).getLong(ControlInformation.ID);
 
             for (String relation : relations) {
-                if (relation.charAt(relation.length() - 1) != 's' && !relation.equals("FeaturesOfInteret")) {
+                if (relation.charAt(relation.length() - 1) != 's' && !relation.equals("FeaturesOfInterest")) {
                     continue;
                 }
                 String[] properties = EntityProperties.getPropertiesListFor(relation);
                 EntityType relationEntityType = getEntityTypeFor(relation);
                 //single orderby
                 for (String property : properties) {
-                    if (property.equals("unitOfMeasurement")) {
+                    if (property.equals("unitOfMeasurement") || property.equals("location")) {
                         continue;
                     }
                     urlString = ServiceURLBuilder.buildURLString(rootUri, entityType, id, relationEntityType, "?$orderby=" + property);
                     responseMap = HTTPMethods.doGet(urlString);
                     response = responseMap.get("response").toString();
                     array = new JSONObject(response).getJSONArray("value");
+
                     for (int i = 1; i < array.length(); i++) {
                         Assert.assertTrue(compareWithPrevious(i, array, property) <= 0, "The ordering is not correct for EntityType " + entityType + " orderby property " + property);
                     }
+
                     urlString = ServiceURLBuilder.buildURLString(rootUri, entityType, id, relationEntityType, "?$orderby=" + property + "%20asc");
                     responseMap = HTTPMethods.doGet(urlString);
                     response = responseMap.get("response").toString();
@@ -423,7 +425,7 @@ public class Capability3Tests {
         try {
             //single orderby
             for (String property : properties) {
-                if (property.equals("unitOfMeasurement")) {
+                if (property.equals("unitOfMeasurement") || property.equals("location") || property.equals("feature")) {
                     continue;
                 }
                 String urlString = ServiceURLBuilder.buildURLString(rootUri, entityType, -1, null, "?$orderby=" + property);
@@ -455,7 +457,7 @@ public class Capability3Tests {
             String orderbyAsc = "?$orderby=";
             String orderbyDesc = "?$orderby=";
             for (String property : properties) {
-                if (property.equals("unitOfMeasurement")) {
+                if (property.equals("unitOfMeasurement") || property.equals("location") || property.equals("feature")) {
                     continue;
                 }
                 if (orderby.charAt(orderby.length() - 1) != '=') {
@@ -523,6 +525,9 @@ public class Capability3Tests {
         JSONObject jObj2 = array.getJSONObject(idx);
         Object o1 = jObj1.get(property);
         Object o2 = jObj2.get(property);
+        if (property.equals("result")) {
+            return compareForOrder(Double.parseDouble((String)o1), Double.parseDouble((String)o2));
+        }
         return compareForOrder(o1, o2);
     }
 
@@ -1145,7 +1150,7 @@ public class Capability3Tests {
      *
      * @param entityType Entity type from EntityType enum list
      */
-    private void checkSelectForEntityTypeRelations(EntityType entityType) {
+    private void  checkSelectForEntityTypeRelations(EntityType entityType) {
         try {
             String[] parentRelations = EntityRelations.getRelationsListFor(entityType);
             String urlString = ServiceURLBuilder.buildURLString(rootUri, entityType, -1, null, null);
@@ -1720,8 +1725,10 @@ public class Capability3Tests {
             samplePropertyValues.add(propertyValue);
 
             propertyValue = URLEncoder.encode(propertyValue.toString(), "UTF-8");
+            
             String urlString = ServiceURLBuilder.buildURLString(rootUri, entityType, -1, null, "?$filter=" + property + "%20lt%20" + propertyValue);
             Map responseMap = HTTPMethods.doGet(urlString);
+            
             String response = responseMap.get("response").toString();
             checkPropertiesForFilter(response, filteredProperties, samplePropertyValues, -2);
 
@@ -1868,7 +1875,16 @@ public class Capability3Tests {
                             propertyValue = propertyValue.toString();
                         }
                     } else if (value instanceof DateTime) {
-                        propertyValue = ISODateTimeFormat.dateTime().parseDateTime(propertyValue.toString());
+                        if (properties.get(j).equals("resultTime")) {
+                            // ResultTime is not set in any test Entities
+                            continue;
+                        }
+                        // Do proper Time comparison
+                        propertyValue = ISODateTimeFormat.dateTimeParser().parseDateTime(propertyValue.toString());
+                    }
+                    if (properties.get(j).equals("result")) {
+                        propertyValue = Double.parseDouble((String)propertyValue);
+                        value = Double.parseDouble((String)value);
                     }
 
                     int result = value.compareTo(propertyValue);
@@ -1886,7 +1902,7 @@ public class Capability3Tests {
                             Assert.assertTrue(result == 0, properties.get(j) + " should be equal to than " + value + ". But the property value is " + propertyValue);
                             break;
                         case 1:
-                            Assert.assertTrue(result <= 0, properties.get(j) + " should be greate than or equal to " + value + ". But the property value is " + propertyValue);
+                            Assert.assertTrue(result <= 0, properties.get(j) + " should be greater than or equal to " + value + ". But the property value is " + propertyValue);
                             break;
                         case 2:
                             Assert.assertTrue(result < 0, properties.get(j) + " should be greater than " + value + ". But the property value is " + propertyValue);
@@ -2076,7 +2092,7 @@ public class Capability3Tests {
                     + "            \"observationType\": \"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\",\n"
                     + "            \"ObservedProperty\": {\n"
                     + "                \"name\": \"Second Luminous Flux\",\n"
-                    + "                \"definition\": \"http://www.qudt.org/qudt/owl/1.0.0/quantity/Instances.html/LuminousFlux\",\n"
+                    + "                \"definition\": \"http://www.qudt.org/qudt/owl/1.0.0/quantity/Instances.html/LuminousFlux2\",\n"
                     + "                \"description\": \"observedProperty 3\"\n"
                     + "            },\n"
                     + "            \"Sensor\": {\n"

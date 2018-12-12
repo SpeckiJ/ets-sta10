@@ -102,9 +102,7 @@ public class SuiteFixtureListener implements ISuiteListener {
      */
     private String checkServiceRootUri(String rootUri) {
         rootUri = rootUri.trim();
-        if (rootUri.lastIndexOf('/') == rootUri.length() - 1) {
-            rootUri = rootUri.substring(0, rootUri.length() - 1);
-        }
+
         HttpURLConnection connection = null;
         String response = null;
         //Create connection
@@ -116,6 +114,7 @@ public class SuiteFixtureListener implements ISuiteListener {
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Content-Type",
                     "application/json");
+            connection.setRequestProperty("Accept", "application/json, text/plain");
 
             connection.setUseCaches(false);
             connection.setDoOutput(true);
@@ -141,6 +140,11 @@ public class SuiteFixtureListener implements ISuiteListener {
             e.printStackTrace();
             return "Cannot connect to " + rootUri + ".";
         }
+        
+        if (rootUri.lastIndexOf('/') == rootUri.length() - 1) {
+            rootUri = rootUri.substring(0, rootUri.length() - 1);
+        }
+        
         JSONObject jsonResponse = null;
         JSONArray entities = null;
         try {

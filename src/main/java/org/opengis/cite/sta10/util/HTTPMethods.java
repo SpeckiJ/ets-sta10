@@ -41,7 +41,7 @@ public class HTTPMethods {
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Content-Type",
                     "application/json");
-
+            connection.setRequestProperty("Accept", "application/json, text/plain");
             connection.setUseCaches(false);
             connection.setDoOutput(true);
 
@@ -94,6 +94,7 @@ public class HTTPMethods {
             connection.setInstanceFollowRedirects(false);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json, text/plain");
             connection.setRequestProperty("charset", "utf-8");
             connection.setRequestProperty("Content-Length", Integer.toString(postDataLength));
             connection.setUseCaches(false);
@@ -139,6 +140,7 @@ public class HTTPMethods {
             connection.setInstanceFollowRedirects(false);
             connection.setRequestMethod("PUT");
             connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json, text/plain");
             connection.setRequestProperty("charset", "utf-8");
             connection.setRequestProperty("Content-Length", Integer.toString(postDataLength));
             connection.setUseCaches(false);
@@ -190,6 +192,7 @@ public class HTTPMethods {
             connection.setDoOutput(true);
             connection.setRequestProperty(
                     "Content-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("Accept", "application/json, text/plain");
             connection.setRequestMethod("DELETE");
             connection.connect();
 
